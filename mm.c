@@ -286,7 +286,7 @@ void free(void *ptr){
   dbg_printf("[free]");
   dbg_printf("%d\n",debugfree);
 	if(ptr==NULL)return;
-  if(GET_ALLOC(ptr)==0)return;
+  if(GET_ALLOC(HDBP(ptr))==0)return;
   /*change alloc*/
   dbg_printf("[updateHF]\n");
   updateHF(ptr,GET_SIZE(HDBP(ptr)),0);
