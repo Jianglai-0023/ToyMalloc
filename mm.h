@@ -22,4 +22,4 @@ extern int mm_init(void);
 
 /* This is largely for debugging.  You can do what you want with the
    verbose flag; we don't care. */
-extern void mm_checkheap();
+extern void mm_checkheap(int verbose);
