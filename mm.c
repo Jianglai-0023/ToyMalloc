@@ -190,7 +190,7 @@ void place(void * bp, size_t size){
   dbg_printf("[place]\n");
   size_t bsize = GET_SIZE(HDBP(bp));
   //判断是否可以分割
-  if(bsize - size > 32){
+  if(bsize - size >= 24){
     // dbg_printf("[cut]\n");
     char * new_block = (char *)bp + size + ALIGNMENT;
     PUT(FTBP(bp),PACK(bsize-size - ALIGNMENT,0));
