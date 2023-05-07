@@ -1,11 +1,12 @@
 /*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- *
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  Blocks are never coalesced or reused.  The size of
- * a block is found at the first aligned word before the block (we need
- * it for realloc).
- *
+ * mm.c - 一个使用显式空闲链表的分配器
+ * 空闲块结构：｜ HEAD｜ PREV_PTR ｜ NEXT_PTR ｜ SPACE ｜ FOOT ｜
+ * 分配块结构：｜ HEAD ｜ SPACE ｜ FOOT ｜
+ * 空闲块的头部和尾部都存储了块的大小和分配位
+ * 分配块的头部和尾部都存储了块的大小和分配位
+ * 所有的空闲块由空闲块内的指针连接成为双向循环链表，头节点为序言块
+ * 每次需要空闲块时，从链表头开始遍历，取出第一个符合要求的块分配
+ * 每次释放空闲块时，将空闲块插入到链表头
  * This code is correct and blazingly fast, but very bad usage-wise since
  * it never frees anything.
  */
@@ -92,6 +93,7 @@ static void add_free_block(void *bp){
   PUTPTR(next_block,bp);
   PUTPTR(((char *)heap_listp + ALIGNMENT),bp);
 }
+
 /*
 * remove_free_block - remove free block in link list
 */
@@ -101,6 +103,7 @@ static void remove_free_block(void *bp){
   PUTPTR(((char *)prev_block + ALIGNMENT),next_block);
   PUTPTR((char *)next_block, prev_block);
 }
+
 /*
 * updateHF - update block's head and foot
 */
@@ -109,6 +112,7 @@ static void updateHF(void *bp, unsigned int size, size_t alloc){
   PUT(HDBP(bp),PACK(size,alloc));
   PUT(FTBP(bp),PACK(size,alloc));
 }
+
 /*
 * coalesce - combine free blocks
 */
@@ -143,6 +147,7 @@ static int coalesce(void *bp){
     } 
     return 0;
 }
+
 /*
 * extend_heap - use a new free block to extend the heap
 */
@@ -160,6 +165,7 @@ static void *extend_heap(size_t bytes){
     PUT((char*)FTBP(bp) + WSIZE,PACK(0,1));
     return bp;
 }
+
 /*
 * place - put words in a free block
 */
@@ -179,6 +185,7 @@ void place(void * bp, size_t size){
     updateHF(bp,bsize,1);
   }
 }
+
 /*
 * find_fit - to find a suitable block in the link list
 */
@@ -197,10 +204,10 @@ static char * find_fit(size_t size){
   }
   else return extend_heap(size);
 }
+
 /*
  * mm_init - Called when a new trace starts.
  */
-
 int mm_init(void)
 {
   /*create the initial empty block with header + prev + nxt + footer*/
@@ -217,8 +224,8 @@ int mm_init(void)
 }
 
 /*
- * malloc - Allocate a block by incrementing the brk pointer.
- *      Always allocate a block whose size is a multiple of the alignment.
+ * malloc - find a suitable in the link list
+ *      
  */
 void *malloc(size_t size)
 {
@@ -229,8 +236,8 @@ void *malloc(size_t size)
 }
 
 /*
- * free - We don't know how to free a block.  So we ignore this call.
- *      Computers have big memories; surely it won't be a problem.
+ * free - put the free block in the head of the link list
+ *      
  */
 void free(void *ptr){
 	if(ptr==NULL)return;
@@ -244,8 +251,7 @@ void free(void *ptr){
 
 /*
  * realloc - Change the size of the block by mallocing a new block,
- *      copying its data, and freeing the old block.  I'm too lazy
- *      to do better.
+ *      copying its data, and freeing the old block.  
  */
 void *realloc(void *oldptr, size_t size)
 {
@@ -279,7 +285,7 @@ void *realloc(void *oldptr, size_t size)
   mm_checkheap(0);
   return newptr;
 }
-//
+
 /*
  * calloc - Allocate the block and set it to zero.
  */
@@ -295,11 +301,17 @@ void *calloc (size_t nmemb, size_t size)
 }
 
 /*
- * mm_checkheap - There are no bugs in my code, so I don't need to check,
- *      so nah!
+ * mm_checkheap -   
+ * Every constant in my data structure
+ * head
+ * foot
+ * prev_ptr
+ * next_ptr
+ * heap_listp
+ * is_alloc
+ * size     
  */
 void mm_checkheap(int verbose){
-	/*Get gcc to be quiet. */
 	char *p = heap_listp;
   dbg_printf("[CHECK]\n");
   while(NEXT_BLK(p) != heap_listp){
