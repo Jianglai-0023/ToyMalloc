@@ -89,14 +89,8 @@ static void add_free_block(void *bp){
   size_t next_block = GETPTR((char *)heap_listp + ALIGNMENT);
   PUTPTR(bp,heap_listp);
   PUTPTR(((char *)bp + ALIGNMENT),next_block);
-//   // dbg_printf("WHAT\n");
-//   // printf("%llx\n",next_block);
-//   // printf("%llx\n",heap_listp);
-// dbg_printf("(2)()\n");
   PUTPTR(next_block,bp);
-  // dbg_printf("()()\n");
   PUTPTR(((char *)heap_listp + ALIGNMENT),bp);
-  // dbg_printf("()(3)\n");
 }
 /*
 * remove_free_block - remove free block in link list
@@ -119,37 +113,26 @@ static void updateHF(void *bp, unsigned int size, size_t alloc){
 * coalesce - combine free blocks
 */
 static int coalesce(void *bp){
-  //todo 处理指针
-    // dbg_printf("01\n");
-    
     size_t pre_alloc = PREV_ALLOC(bp);
     size_t next_alloc = NEXT_ALLOC(bp);
-    // dbg_printf("%llx\n",pre_alloc);
-    // dbg_printf("%llx\n",next_alloc); 
     size_t size = GET_SIZE(HDBP(bp));
     char * next_block = (char *)bp + size + ALIGNMENT;
     char * prev_block = (char *)bp - ALIGNMENT - PREV_SIZE(bp);
-    // dbg_printf("%d\n",PREV_SIZE(bp));
     if(pre_alloc && next_alloc)return 1;
     else if(pre_alloc && !next_alloc){//combine with next block
-    // dbg_printf("02\n");
       size += NEXT_SIZE(bp) + 8;
       PUT((HDBP(bp)),PACK(size,0));
       PUT(FTBP(next_block),PACK(size,0));
       /*link list*/
       remove_free_block(next_block);
       add_free_block(bp);
-    }else if(!pre_alloc && next_alloc){//combine with previous block
-      // dbg_printf("[combine prev]\n");
-      // dbg_printf("%lld\n",size);
-      
+    }else if(!pre_alloc && next_alloc){
+      /*combine with previous block*/
       size += PREV_SIZE(bp) + 8;
-      // dbg_printf("%lld\n",size);
       PUT(FTBP(bp),PACK(size,0));
       PUT(HDBP(prev_block),PACK(size,0));
-      // dbg_printf("%llx\n",HDBP(prev_block));
-      // mm_checkheap();
-    }else{//combine with previous and next block
+    }else{
+      /*combine with previous and next block*/
       size += PREV_SIZE(bp) + NEXT_SIZE(bp) + 16;
       PUT(FTBP(next_block),PACK(size,0));
       PUT(HDBP(prev_block),PACK(size,0)); 
@@ -164,7 +147,6 @@ static int coalesce(void *bp){
 * extend_heap - use a new free block to extend the heap
 */
 static void *extend_heap(size_t bytes){
-    dbg_printf("[extend heap]\n");
     char * bp;
     size_t size;
     size = ALIGN(bytes);
@@ -176,32 +158,23 @@ static void *extend_heap(size_t bytes){
     updateHF(bp,size,1);
     /*rewrite the tail head*/
     PUT((char*)FTBP(bp) + WSIZE,PACK(0,1));
-    // dbg_printf("###\n");
-    // printf("%llx\n",GETPTR((char *)heap_listp + ALIGNMENT));
-    // printf("%llx\n",heap_listp);
-    // add_free_block(bp);
-    // dbg_printf("@@@@\n");
     return bp;
 }
 /*
 * place - put words in a free block
 */
 void place(void * bp, size_t size){
-  dbg_printf("[place]\n");
   size_t bsize = GET_SIZE(HDBP(bp));
-  //判断是否可以分割
   if(bsize - size >= 24){
-    // dbg_printf("[cut]\n");
     char * new_block = (char *)bp + size + ALIGNMENT;
     PUT(FTBP(bp),PACK(bsize-size - ALIGNMENT,0));
     PUT(HDBP(bp),PACK(size,1));
     PUT(((char *)bp + size), PACK(size,1));
-    //put next head
+    /*put next head*/
     PUT((HDBP(new_block)),PACK(bsize-size - ALIGNMENT,0));
     remove_free_block(bp);
     add_free_block(new_block);
   }else{
-    // dbg_printf("[notcut]\n");
     remove_free_block(bp);
     updateHF(bp,bsize,1);
   }
@@ -210,26 +183,14 @@ void place(void * bp, size_t size){
 * find_fit - to find a suitable block in the link list
 */
 static char * find_fit(size_t size){
-  // dbg_printf("[find_fit]\n");
-  // printf("%llx\n",GETPTR((char *)heap_listp + ALIGNMENT));
   /*no free block right now*/
   if((char *)NEXT_BLK(heap_listp)==heap_listp){
-    // printf("%llx\n",GETPTR((char *)heap_listp + ALIGNMENT)); 
     return extend_heap(size);
   }
-  
-  // printf("%llx\n",NEXT_BLK(heap_listp));
-  // printf("%llx\n",heap_listp);
   char * bp = (char *)NEXT_BLK(heap_listp);
-
-  // dbg_printf("%d\n",size);
-  // dbg_printf("%llx\n",NEXT_BLK(heap_listp));
-  // dbg_printf("%d\n",GET_SIZE(HDBP(bp))); 
   while(GET_SIZE(HDBP(bp)) < size && bp!=heap_listp){
     bp = (char *)NEXT_BLK(bp);
   }
-  // dbg_printf("[find_fit]3\n");
-  // dbg_printf("%llx\n",bp); 
   if(bp!=heap_listp){
     place(bp,size);
     return bp;
@@ -242,7 +203,6 @@ static char * find_fit(size_t size){
 
 int mm_init(void)
 {
-  dbg_printf("[mm_init] enter \n");
   /*create the initial empty block with header + prev + nxt + footer*/
   heap_listp = mem_sbrk(4*WSIZE + 2*ALIGNMENT);
   if(heap_listp == (void*)-1)return -1;
@@ -253,12 +213,6 @@ int mm_init(void)
   PUT(((char*)heap_listp + (2*WSIZE + 2*ALIGNMENT)), PACK(2*ALIGNMENT,1)); //footer
   PUT(((char *)heap_listp + 3*ALIGNMENT + WSIZE),PACK(0,1)); // tail head
   heap_listp += 2*WSIZE;
-  // printf("%llx\n",GETPTR((char*)heap_listp + ALIGNMENT));
-  // printf("%llx\n",heap_listp);
-  /*extend the heap with empty block*/
-  /*maybe it isn't good*/
-  // if(extend_heap(CHUNKSIZE/WSIZE,heap_listp)==NULL)return -1;
-
   return 0;
 }
 
@@ -268,9 +222,6 @@ int mm_init(void)
  */
 void *malloc(size_t size)
 {
-  dbg_printf("[alloc]");
-  dbg_printf("%d\n",size);
-  // mm_checkheap();
   if(size == 0)return NULL;
   size_t asize = ALIGN(size);
   if(asize < 16) asize = 16;
@@ -281,27 +232,14 @@ void *malloc(size_t size)
  * free - We don't know how to free a block.  So we ignore this call.
  *      Computers have big memories; surely it won't be a problem.
  */
-static int debugfree = 0;
 void free(void *ptr){
-  debugfree ++;
-  dbg_printf("[free]");
-  
 	if(ptr==NULL)return;
-  dbg_printf("%lld\n",GET_SIZE(HDBP(ptr)));
   if(GET_ALLOC(HDBP(ptr))==0)return;
-  // dbg_printf("qwq");
-  /*change alloc*/
-  // dbg_printf("[updateHF]\n");
   updateHF(ptr,GET_SIZE(HDBP(ptr)),0);
-  // dbg_printf("%lld\n",GET_SIZE(HDBP(ptr)));
   /*combine*/
-  // dbg_printf("[combine]\n");
   int flag = coalesce(ptr);
   /*linked list*/
-  // dbg_printf("[addfree]\n");
-  // dbg_printf("%d\n",flag);
   if(flag)add_free_block(ptr);
-//  dbg_printf("%lld\n",GET_SIZE(HDBP(ptr))); 
 }
 
 /*
@@ -309,20 +247,13 @@ void free(void *ptr){
  *      copying its data, and freeing the old block.  I'm too lazy
  *      to do better.
  */
-static int debug = 0;
 void *realloc(void *oldptr, size_t size)
 {
-  debug ++;
-  dbg_printf("[realloc]");
-  dbg_printf("%lld\n",size);
-  mm_checkheap(0);
   size_t oldsize;
   void *newptr;
-
   /* If size == 0 then this is just free, and we return NULL. */
   if(size == 0) {
     free(oldptr);
-    mm_checkheap(0); 
     return 0;
   }
 
