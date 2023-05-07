@@ -315,14 +315,14 @@ void *realloc(void *oldptr, size_t size)
   debug ++;
   dbg_printf("[realloc]");
   dbg_printf("%lld\n",size);
-  mm_checkheap();
+  mm_checkheap(0);
   size_t oldsize;
   void *newptr;
 
   /* If size == 0 then this is just free, and we return NULL. */
   if(size == 0) {
     free(oldptr);
-    mm_checkheap(); 
+    mm_checkheap(0); 
     return 0;
   }
 
@@ -345,7 +345,7 @@ void *realloc(void *oldptr, size_t size)
 
   /* Free the old block. */
   free(oldptr);
-  mm_checkheap();
+  mm_checkheap(0);
   return newptr;
 }
 //
