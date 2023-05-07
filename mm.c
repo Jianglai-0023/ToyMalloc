@@ -367,7 +367,7 @@ void *calloc (size_t nmemb, size_t size)
  * mm_checkheap - There are no bugs in my code, so I don't need to check,
  *      so nah!
  */
-void mm_checkheap(){
+void mm_checkheap(int verbose){
 	/*Get gcc to be quiet. */
 	char *p = heap_listp;
   dbg_printf("[CHECK]\n");
